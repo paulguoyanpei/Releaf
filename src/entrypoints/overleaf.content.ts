@@ -317,37 +317,6 @@ const SIDEBAR_STYLES = `
   .send-btn:hover { opacity: 0.9; }
   .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .new-session-btn {
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid #313244;
-    background: #181825;
-    color: #6c7086;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    line-height: 1;
-  }
-
-  .new-session-btn:hover {
-    color: #cba6f7;
-    border-color: #cba6f7;
-    background: #313244;
-  }
-
-  .new-session-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  .rollback-btn {
-    border-color: #f9e2af;
-    color: #f9e2af;
-  }
-
-  .rollback-btn:hover {
-    background: #3d3520;
-    border-color: #f9e2af;
-  }
-
   /* Context Toggle */
   .context-toggle {
     display: flex;
@@ -487,85 +456,6 @@ const SIDEBAR_STYLES = `
     background: #313244;
     border: 1px solid #585b70;
     color: #cdd6f4;
-  }
-
-  /* Edit Confirm Panel */
-  .edit-confirm-panel {
-    background: #181825;
-    border: 1px solid #313244;
-    border-radius: 8px;
-    padding: 10px;
-    margin-top: 8px;
-  }
-
-  .edit-confirm-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .edit-confirm-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: #cba6f7;
-  }
-
-  .edit-confirm-count {
-    font-size: 11px;
-    color: #6c7086;
-  }
-
-  .edit-file-group {
-    margin-bottom: 10px;
-  }
-
-  .edit-file-name {
-    font-size: 11px;
-    font-weight: 600;
-    color: #89b4fa;
-    padding: 4px 8px;
-    background: #1e3a5f;
-    border-radius: 4px;
-    margin-bottom: 6px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-  }
-
-  .edit-replacement {
-    margin-bottom: 8px;
-    transition: opacity 0.15s;
-  }
-
-  .edit-replacement.disabled {
-    opacity: 0.4;
-  }
-
-  .edit-toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    color: #a6adc8;
-  }
-
-  .edit-toggle-row input[type="checkbox"] {
-    accent-color: #cba6f7;
-  }
-
-  .edit-confirm-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-  }
-
-  .edit-applied-badge {
-    font-size: 12px;
-    color: #a6e3a1;
-    font-weight: 600;
-    text-align: center;
-    padding: 6px;
   }
 
   /* Streaming indicator */

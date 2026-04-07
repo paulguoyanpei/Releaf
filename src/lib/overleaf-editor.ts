@@ -38,11 +38,3 @@ export function replaceRange(from: number, to: number, text: string): Promise<bo
     payload: { from, to, text },
   });
 }
-
-/** Replace the entire document content (used for checkpoint rollback) */
-export function replaceDocument(text: string): Promise<boolean> {
-  return sendBridgeCommand<boolean>({
-    action: 'replaceDocument',
-    payload: { text },
-  });
-}

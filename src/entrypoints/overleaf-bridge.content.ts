@@ -68,14 +68,6 @@ export default defineContentScript({
           result = true;
           break;
         }
-        case 'replaceDocument': {
-          const length = view.state.doc.length;
-          view.dispatch({
-            changes: { from: 0, to: length, insert: payload.text },
-          });
-          result = true;
-          break;
-        }
       }
 
       document.dispatchEvent(

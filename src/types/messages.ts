@@ -9,16 +9,6 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-/** Checkpoint for rollback: captures state after each assistant reply */
-export interface Checkpoint {
-  /** Number of messages at this point */
-  messageCount: number;
-  /** Document content snapshot, null if no edits were applied this turn */
-  docContent: string | null;
-  /** Timestamp for display */
-  timestamp: number;
-}
-
 /** Messages between content scripts and background worker */
 export type BackgroundMessage =
   | { type: 'CHECK_SESSION' }
