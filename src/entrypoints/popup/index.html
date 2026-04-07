@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Releaf</title>
+  <style>
+    body {
+      width: 280px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      margin: 0;
+    }
+    h1 { font-size: 16px; color: #cba6f7; margin: 0 0 12px; }
+    .status { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.ok { background: #a6e3a1; }
+    .dot.no { background: #f38ba8; }
+    .dot.wait { background: #f9e2af; }
+    p { font-size: 13px; color: #a6adc8; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="./main.tsx"></script>
+</body>
+</html>
