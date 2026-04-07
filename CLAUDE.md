@@ -73,3 +73,9 @@ src/
 - **Resize handle**: mousemove/mouseup listeners must attach to the **host page** `window.document`, not the Shadow DOM's document, because mouse events outside the shadow boundary are lost
 - **Standalone window**: uses `?projectId=` URL param so `getProjectId()` works outside Overleaf; editor integration (selection, insert/replace) is unavailable in this mode
 - Node 18 compatible (WXT pinned to 0.18.x)
+
+## Git workflow
+- Always branch from latest main.
+- Verify branch + diff vs origin/main before edits.
+- Avoid old PR branches.
+- If dirty history → new branch.
