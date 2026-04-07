@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChatMessage } from './ChatMessage';
 import { ContextToggle } from './ContextToggle';
-import type { ChatMessage as ChatMessageType } from '../../types/messages';
+import type { ChatMessage as ChatMessageType, Checkpoint } from '../../types/messages';
 import type { ContextScope } from '../../types/overleaf';
-import { getSelection, getDocument } from '../../lib/overleaf-editor';
+import { getSelection, getDocument, replaceDocument } from '../../lib/overleaf-editor';
 import { parseFileTree, switchToFile } from '../../lib/overleaf-filetree';
 import { buildPrompt, estimateTokens } from '../../lib/context-builder';
 import { filterChangedFiles } from '../../lib/snapshot-tracker';
+import { hasEditBlocks } from '../../lib/edit-parser';
 import { getProjectId, KEYS } from '../../utils/storage-keys';
 import type { PortMessage } from '../../messaging/protocol';
+
+const MAX_CHECKPOINTS = 20;
 
 export function ChatTab() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
@@ -20,6 +23,7 @@ export function ChatTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const portRef = useRef<chrome.runtime.Port | null>(null);
+  const checkpointsRef = useRef<Checkpoint[]>([]);
   const projectId = getProjectId();
 
   // Load chat history and settings on mount
@@ -53,6 +57,20 @@ export function ChatTab() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Listen for clear-chat events (from Settings tab or New Session button)
+  useEffect(() => {
+    function handleClear() {
+      setMessages([]);
+      checkpointsRef.current = [];
+      if (projectId) {
+        chrome.storage.local.remove(KEYS.chatHistory(projectId));
+        chrome.runtime.sendMessage({ type: 'DELETE_CONVERSATION', projectId });
+      }
+    }
+    window.addEventListener('releaf:clear-chat', handleClear);
+    return () => window.removeEventListener('releaf:clear-chat', handleClear);
+  }, [projectId]);
+
   // Poll for selection changes
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -65,6 +83,56 @@ export function ChatTab() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  /** Create a checkpoint after assistant reply completes */
+  const createCheckpoint = useCallback(async (messageCount: number, assistantContent: string) => {
+    // Only snapshot the document if this reply contains edit blocks
+    let docContent: string | null = null;
+    if (hasEditBlocks(assistantContent)) {
+      try {
+        docContent = await getDocument();
+      } catch {
+        // Bridge not available (standalone window)
+      }
+    }
+
+    const cp: Checkpoint = { messageCount, docContent, timestamp: Date.now() };
+    const cps = checkpointsRef.current;
+    cps.push(cp);
+    // Evict oldest if over limit
+    if (cps.length > MAX_CHECKPOINTS) {
+      cps.splice(0, cps.length - MAX_CHECKPOINTS);
+    }
+  }, []);
+
+  /** Rollback to a checkpoint corresponding to messageCount */
+  const handleRollback = useCallback(async (targetMessageCount: number) => {
+    // Find the checkpoint
+    const cps = checkpointsRef.current;
+    const cpIndex = cps.findIndex((cp) => cp.messageCount === targetMessageCount);
+    if (cpIndex === -1) return;
+    const checkpoint = cps[cpIndex];
+
+    // Truncate messages
+    setMessages((prev) => prev.slice(0, checkpoint.messageCount));
+
+    // Restore document if we have a snapshot
+    if (checkpoint.docContent !== null) {
+      try {
+        await replaceDocument(checkpoint.docContent);
+      } catch {
+        // Bridge not available
+      }
+    }
+
+    // Remove checkpoints after this one
+    cps.splice(cpIndex + 1);
+
+    // Delete Claude conversation so next message starts fresh
+    if (projectId) {
+      chrome.runtime.sendMessage({ type: 'DELETE_CONVERSATION', projectId });
+    }
+  }, [projectId]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming || !projectId) return;
@@ -87,7 +155,6 @@ export function ChatTab() {
 
     if (scope === 'full-project') {
       const tree = parseFileTree();
-      // Read each file's content
       for (const file of tree) {
         if (file.name === currentFileName) {
           files.push({ ...file, content: currentDoc });
@@ -97,10 +164,8 @@ export function ChatTab() {
           files.push({ ...file, content });
         }
       }
-      // Switch back to original file
       const currentFile = tree.find((f) => f.name === currentFileName);
       if (currentFile) await switchToFile(currentFile);
-
       files = await filterChangedFiles(projectId, files);
     } else {
       files = [{ name: currentFileName, path: currentFileName, content: currentDoc }];
@@ -142,6 +207,15 @@ export function ChatTab() {
         setIsStreaming(false);
         port.disconnect();
         portRef.current = null;
+
+        // Create checkpoint after reply completes
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === 'assistant') {
+            createCheckpoint(prev.length, lastMsg.content);
+          }
+          return prev;
+        });
       } else if (msg.type === 'STREAM_ERROR') {
         setMessages((prev) => {
           const updated = [...prev];
@@ -158,7 +232,7 @@ export function ChatTab() {
     });
 
     port.postMessage({ type: 'SEND_PROMPT', projectId, prompt: fullPrompt });
-  }, [input, isStreaming, projectId, scope, selectedText, systemPrompt]);
+  }, [input, isStreaming, projectId, scope, selectedText, systemPrompt, createCheckpoint]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -166,6 +240,13 @@ export function ChatTab() {
       handleSend();
     }
   };
+
+  /** Find the checkpoint for a given assistant message index */
+  function getCheckpointForMessage(msgIndex: number): Checkpoint | undefined {
+    // The checkpoint's messageCount is the messages.length after the assistant reply,
+    // which equals msgIndex + 1
+    return checkpointsRef.current.find((cp) => cp.messageCount === msgIndex + 1);
+  }
 
   return (
     <>
@@ -176,8 +257,17 @@ export function ChatTab() {
             Select text in the editor or type a prompt to get started.
           </div>
         )}
-        {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} isStreaming={isStreaming && msg === messages[messages.length - 1] && msg.role === 'assistant'} />
+        {messages.map((msg, idx) => (
+          <ChatMessage
+            key={msg.id}
+            message={msg}
+            isStreaming={isStreaming && msg === messages[messages.length - 1] && msg.role === 'assistant'}
+            onRollback={
+              msg.role === 'assistant' && !isStreaming && getCheckpointForMessage(idx)
+                ? () => handleRollback(idx + 1)
+                : undefined
+            }
+          />
         ))}
         <div ref={messagesEndRef} />
       </div>
@@ -205,6 +295,14 @@ export function ChatTab() {
             disabled={!input.trim() || isStreaming}
           >
             {isStreaming ? '...' : 'Send'}
+          </button>
+          <button
+            className="new-session-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('releaf:clear-chat'))}
+            disabled={isStreaming || messages.length === 0}
+            title="Clear chat and start a new session"
+          >
+            +
           </button>
         </div>
       </div>

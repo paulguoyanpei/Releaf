@@ -15,7 +15,8 @@ export type BridgeCommand =
   | { action: 'getCursorPosition' }
   | { action: 'insertAtCursor'; payload: { text: string } }
   | { action: 'replaceSelection'; payload: { text: string } }
-  | { action: 'replaceRange'; payload: { from: number; to: number; text: string } };
+  | { action: 'replaceRange'; payload: { from: number; to: number; text: string } }
+  | { action: 'replaceDocument'; payload: { text: string } };
 
 /** Response from the bridge */
 export interface BridgeResponse {

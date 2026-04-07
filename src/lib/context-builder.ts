@@ -29,7 +29,22 @@ export function buildPrompt(input: ContextInput): string {
   parts.push(
     '<instructions>',
     'You are an expert LaTeX writing assistant embedded in the Overleaf editor.',
-    'Always preserve valid LaTeX syntax. When suggesting edits, output ONLY the replacement LaTeX code unless asked for explanation.',
+    'Always preserve valid LaTeX syntax.',
+    '',
+    'When you need to modify the document, use the following structured format for EACH file you want to change.',
+    'You may include multiple SEARCH/REPLACE pairs in one EDIT block, and multiple EDIT blocks for different files.',
+    'The SEARCH text must exactly match existing content in the file (including whitespace).',
+    '',
+    '<<<EDIT file="filename.tex"',
+    '<<<SEARCH',
+    'exact text to find in the file',
+    '===',
+    'new text to replace it with',
+    'REPLACE>>>',
+    'EDIT>>>',
+    '',
+    'You can also include a brief explanation outside the EDIT blocks.',
+    'If the user only asks a question and no edit is needed, just answer normally without EDIT blocks.',
     '</instructions>'
   );
 
