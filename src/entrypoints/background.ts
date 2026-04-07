@@ -33,6 +33,11 @@ export default defineBackground(() => {
       chrome.tabs.create({ url: 'https://claude.ai' });
       return false;
     }
+
+    if (message.type === 'OPEN_SIDEBAR_WINDOW') {
+      openSidebarWindow(message.projectId).then(sendResponse);
+      return true;
+    }
   });
 
   // --- Port-based streaming handler ---
@@ -121,6 +126,51 @@ export default defineBackground(() => {
         // Port already disconnected
       }
     }
+  }
+
+  /** Open the sidebar in a separate popup window */
+  let sidebarWindowId: number | null = null;
+
+  async function openSidebarWindow(projectId?: string): Promise<{ ok: boolean }> {
+    // If already open, focus it
+    if (sidebarWindowId !== null) {
+      try {
+        await chrome.windows.update(sidebarWindowId, { focused: true });
+        return { ok: true };
+      } catch {
+        sidebarWindowId = null;
+      }
+    }
+
+    // Get projectId from active tab if not provided
+    let pid = projectId;
+    if (!pid) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const match = tab?.url?.match(/overleaf\.com\/project\/([a-f0-9]+)/);
+      pid = match?.[1] ?? '';
+    }
+
+    const url = chrome.runtime.getURL(`sidebar.html?projectId=${pid}`);
+    const win = await chrome.windows.create({
+      url,
+      type: 'popup',
+      width: 420,
+      height: 700,
+    });
+
+    sidebarWindowId = win?.id ?? null;
+
+    // Track window close
+    if (sidebarWindowId !== null) {
+      chrome.windows.onRemoved.addListener(function onRemoved(windowId) {
+        if (windowId === sidebarWindowId) {
+          sidebarWindowId = null;
+          chrome.windows.onRemoved.removeListener(onRemoved);
+        }
+      });
+    }
+
+    return { ok: true };
   }
 
   /** Delete a conversation for cleanup */

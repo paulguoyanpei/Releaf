@@ -73,6 +73,24 @@ const SIDEBAR_STYLES = `
     transform: translateX(100%);
   }
 
+  /* Resize handle on the left edge */
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    left: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 100000;
+    background: transparent;
+    transition: background 0.15s;
+  }
+
+  .resize-handle:hover,
+  .resize-handle:active {
+    background: #cba6f7;
+  }
+
   .sidebar-toggle {
     position: fixed;
     top: 50%;
@@ -111,6 +129,27 @@ const SIDEBAR_STYLES = `
     font-weight: 600;
     color: #cba6f7;
     margin-right: auto;
+  }
+
+  .popout-btn {
+    background: none;
+    border: 1px solid #313244;
+    color: #6c7086;
+    cursor: pointer;
+    font-size: 16px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .popout-btn:hover {
+    color: #cba6f7;
+    border-color: #cba6f7;
+    background: #181825;
   }
 
   .tab-bar {

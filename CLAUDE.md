@@ -13,15 +13,16 @@ Releaf is a Chrome extension (Manifest V3) that embeds an AI-powered writing ass
 
 ## Architecture
 
-Five scripts across three execution contexts:
+Six scripts across three execution contexts:
 
 | Script | World | Page | Purpose |
 |--------|-------|------|---------|
-| `background.ts` | Service Worker | Always | claude.ai API proxy, streaming |
+| `background.ts` | Service Worker | Always | claude.ai API proxy, streaming, window management |
 | `overleaf.content.ts` | ISOLATED | overleaf.com/project/* | Shadow DOM sidebar UI |
 | `overleaf-bridge.content.ts` | MAIN | overleaf.com/project/* | CodeMirror 6 EditorView access |
 | `claude-bridge.content.ts` | ISOLATED | claude.ai/* | Session presence signal |
 | `popup/` | Extension | Popup click | Quick status display |
+| `sidebar/` | Extension | Standalone window | Detached sidebar (same React components) |
 
 **Why two Overleaf scripts**: CodeMirror's `EditorView` lives on the page's `window`, inaccessible from ISOLATED world. The MAIN-world bridge accesses it; the ISOLATED script owns the UI and communicates via `CustomEvent`.
 
@@ -38,7 +39,8 @@ Sidebar (ISOLATED) <--CustomEvent--> Bridge (MAIN, EditorView)
 
 - `src/lib/claude-api.ts` — All claude.ai API logic (undocumented endpoints, isolated for easy updates)
 - `src/entrypoints/overleaf-bridge.content.ts` — CodeMirror 6 access via `.cmView.view`
-- `src/entrypoints/background.ts` — Service worker orchestrating streaming and message routing
+- `src/entrypoints/background.ts` — Service worker orchestrating streaming, message routing, and sidebar window lifecycle
+- `src/entrypoints/sidebar/` — Standalone window entrypoint reusing sidebar React components
 - `src/lib/context-builder.ts` — Assembles LaTeX-aware prompts from project files
 
 ## Build & Dev Commands
@@ -55,7 +57,7 @@ npm run zip          # Package for Chrome Web Store
 
 ```
 src/
-  entrypoints/       # WXT entrypoints (background, content scripts, popup)
+  entrypoints/       # WXT entrypoints (background, content scripts, popup, sidebar)
   components/        # React components (sidebar/, common/)
   lib/               # Core logic (claude-api, editor bridge, context, diff)
   messaging/         # Extension message protocol and bridge events
@@ -68,4 +70,6 @@ src/
 - claude.ai endpoints are undocumented and may change — all API logic is in `claude-api.ts`
 - The MAIN-world bridge uses `view.dispatch()` for edits, which goes through CodeMirror's transaction system and is compatible with Overleaf collaboration/version history
 - Shadow DOM isolates sidebar CSS; `isolateEvents` prevents keyboard capture by CodeMirror
+- **Resize handle**: mousemove/mouseup listeners must attach to the **host page** `window.document`, not the Shadow DOM's document, because mouse events outside the shadow boundary are lost
+- **Standalone window**: uses `?projectId=` URL param so `getProjectId()` works outside Overleaf; editor integration (selection, insert/replace) is unavailable in this mode
 - Node 18 compatible (WXT pinned to 0.18.x)
