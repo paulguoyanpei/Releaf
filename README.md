@@ -1,4 +1,4 @@
-# Releaf
+# Releaf (Vibing Overleaf)
 
 AI-powered writing assistant for Overleaf. *Releaf* the stress of academic writing.
 
